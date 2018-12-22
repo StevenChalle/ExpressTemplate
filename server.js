@@ -30,10 +30,16 @@ passport.use(new LocalStrategy(
   }
 ))
 
-// tell passport how to serialize the user
+// describe passport serialization and deserialization
 passport.serializeUser((user, done) => {
   console.log('Inside serializeUser callback. User id is save to the session file store here')
   done(null, user.id)
+})
+passport.deserializeUser((id, done) => {
+  console.log('Inside deserializeUser callback')
+  console.log(`The user id passport saved in the session file store is: ${id}`)
+  const user = users[0].id === id ? users[0] : false
+  done(null, user)
 })
 
 // create & configure the server
@@ -64,19 +70,29 @@ app.get('/login', (req, res) => {
   res.send(`You got the login page!\n`)
 })
 
-app.post('/login', (req, res) => {
-  console.log('Inside POST /login callback function')
+app.post('/login', (req, res, next) => {
+  console.log('Inside POST /login callback')
   passport.authenticate('local', (err, user, info) => {
-    console.log('Inside passport.authenticate() callback')
+    console.log('Inside passport.authenticate() callback');
     console.log(`req.session.passport: ${JSON.stringify(req.session.passport)}`)
     console.log(`req.user: ${JSON.stringify(req.user)}`)
     req.login(user, (err) => {
       console.log('Inside req.login() callback')
       console.log(`req.session.passport: ${JSON.stringify(req.session.passport)}`)
       console.log(`req.user: ${JSON.stringify(req.user)}`)
-      return res.send('You were authenticated & logged in!\n')
+      return res.send('You were authenticated & logged in!\n');
     })
-  })
+  })(req, res, next);
+})
+
+app.get('/authrequired', (req, res) => {
+  console.log('Inside GET /authrequired callback')
+  console.log(`User authenticated? ${req.isAuthenticated()}`)
+  if (req.isAuthenticated()) {
+    res.send('you hit the authentication endpoint\n')
+  } else {
+    res.redirect('/')
+  }
 })
 
 // launch the server
